@@ -15,6 +15,7 @@
             </x-slot>
 
             <x-slot name="content">
+                @can('removeTeamMember', [auth()->user()->currentTeam, $member])
                 <x-dropdown-link>
                     <form action="{{ route('team.members.destroy', [$team, $member]) }}" method="POST">
                         @csrf
@@ -24,9 +25,10 @@
                         </button>
                     </form>
                 </x-dropdown-link>
+                @endcan
 
                 <x-dropdown-link href="">
-                    {{ __('Change team memer role') }}
+                    {{ __('Change team member role') }}
                 </x-dropdown-link>
             </x-slot>
         </x-dropdown>
