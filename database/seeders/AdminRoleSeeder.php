@@ -17,5 +17,6 @@ class AdminRoleSeeder extends Seeder
         $role = Role::firstOrCreate(['name' => 'team admin']);
 
         $role->givePermissionTo(Permission::firstOrCreate(['name' => 'update team']));
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'view team members']));
     }
 }
