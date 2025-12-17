@@ -8,8 +8,12 @@ use Illuminate\Http\Request;
 
 class TeamMemberController extends Controller
 {
-    public function destroy(Team $team, User $member)
+    public function destroy(Team $team, User $user)
     {
-        $team->members()->detach($member);
+        $team->members()->detach($user);
+
+        $user->currentTeam()->associate($user->teams()->first())->save();
+
+        return redirect()->route('team.edit');
     }
 }
