@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Middleware\TeamsPermission;
+use App\Mail\TeamInvitation;
 use App\Models\Team;
 use App\Models\TeamInvite;
 use App\Models\User;
+use Illuminate\Routing\Middleware\ValidateSignature;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -13,6 +15,8 @@ afterEach(function () {
 });
 
 it('create an invite', function() {
+    Mail::fake();
+
     $user = User::factory()->create();
 
     // Mock the token generator
@@ -23,6 +27,11 @@ it('create an invite', function() {
             'email' => $email = 'mcurie@example.com'
         ])
         ->assertRedirect();
+
+    Mail::assertSent(TeamInvitation::class, function(TeamInvitation $mail) use ($email) {
+        return $mail->hasTo($email) &&
+            $mail->teamInvite->token === 'abc';
+    });
 
     assertDatabaseHas('team_invites', [
         'team_id' => $user->currentTeam->id,
@@ -122,4 +131,39 @@ it('cannot revoke an invite without permission', function() {
         ->withoutMiddleware(TeamsPermission::class)
         ->delete(route('team.invites.destroy', [$user->currentTeam, $invite]))
         ->assertForbidden();
+});
+
+it('fails to accept invite if route is not signed', function() {
+    $invite = TeamInvite::factory()
+        ->for(Team::factory()->create())
+        ->create();
+
+    $acceptingUser = User::factory()->create();
+
+    actingAs($acceptingUser)
+        ->get('/team/invites/accept?token=' . $invite->token)
+        ->assertForbidden();
+});
+
+it('cant accept an invite', function() {
+    $invite = TeamInvite::factory()
+        ->for(Team::factory()->create())
+        ->create();
+
+    $acceptingUser = User::factory()->create();
+
+    actingAs($acceptingUser)
+        ->withoutMiddleware(ValidateSignature::class)
+        ->get('/team/invites/accept?token=' . $invite->token)
+        ->assertRedirect('/dashboard');
+
+    expect($acceptingUser->teams->contains($invite->team))->toBeTrue()
+        ->and($acceptingUser->hasRole('team member'))->toBeTrue()
+        ->and($acceptingUser->currentTeam->id)->toBe($invite->team_id);
+
+    assertDatabaseMissing('team_invites', [
+        'team_id' => $invite->team_id,
+        'token' => $invite->token,
+        'email' => $invite->email
+    ]);
 });

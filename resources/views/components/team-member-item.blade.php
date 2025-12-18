@@ -5,6 +5,7 @@
             {{ $member->name }} ({{ $member->email }})
         </div>
 
+        @canany(['removeTeamMember', 'changeMemberRole'], [$team, $member])
         <x-dropdown align="right" width="48">
             <x-slot name="trigger">
                 <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-hidden transition ease-in-out duration-150">
@@ -27,14 +28,51 @@
                 </x-dropdown-link>
                 @endcan
 
+                @can('changeMemberRole', [auth()->user()->currentTeam, $member])
                 <x-dropdown-link href="">
-                    {{ __('Change team member role') }}
+                    <button
+                        x-on:click.prevent="$dispatch('open-modal', 'change-member-{{ $member->id }}-role')"
+                    >{{ __('Change member role') }}</button>
                 </x-dropdown-link>
+                @endcan
             </x-slot>
         </x-dropdown>
     </div>
+    @endcanany
 
     <div class="mt-3 text-sm text-gray-500">
         Role: <span class="text-gray-700">{{ $member->roles->pluck('name')->join(',') }}</span>
     </div>
 </li>
+
+@can('changeMemberRole', [auth()->user()->currentTeam, $member])
+    <x-modal name="change-member-{{ $member->id }}-role" focusable>
+        <form method="post" action="" class="p-6">
+            @csrf
+
+            <h2 class="text-lg font-medium text-gray-900">
+                {{ __('Are you sure you want to delete your account?') }}
+            </h2>
+
+            <p class="mt-1 text-sm text-gray-600">
+                Change role for {{ $member->name }} ({{ $member->email }})
+            </p>
+
+            <div class="mt-6">
+               <x-select-input>
+                   <option value="admin">Admin</option>
+               </x-select-input>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <x-secondary-button x-on:click="$dispatch('close')">
+                    {{ __('Cancel') }}
+                </x-secondary-button>
+
+                <x-primary-button class="ms-3">
+                    {{ __('Change role') }}
+                </x-primary-button>
+            </div>
+        </form>
+    </x-modal>
+@endcan

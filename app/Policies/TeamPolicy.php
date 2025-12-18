@@ -57,4 +57,9 @@ class TeamPolicy
     {
         return $user->can('revoke invitation');
     }
+
+    public function changeMemberRole(User $user, Team $team, User $member)
+    {
+        return $user->can('change member roles');
+    }
 }
